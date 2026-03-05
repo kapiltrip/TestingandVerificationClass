@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SCOAP vs Min-Max Heuristic</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 12mm;
+    }
+
+    :root {
+      --ink: #1c1c1c;
+      --muted: #4f4f4f;
+      --line: #cfcfcf;
+      --soft: #f5f4ef;
+      --accent: #d8e4ec;
+      --accent-2: #efe5cf;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.35;
+      background: white;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 8px 0;
+      line-height: 1.15;
+    }
+
+    h1 {
+      font-size: 24px;
+      letter-spacing: 0.2px;
+    }
+
+    h2 {
+      margin-top: 16px;
+      font-size: 16px;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 4px;
+    }
+
+    h3 {
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    p {
+      margin: 6px 0;
+    }
+
+    .subtle {
+      color: var(--muted);
+    }
+
+    .panel {
+      padding: 10px 12px;
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      table-layout: fixed;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      vertical-align: top;
+      padding: 6px 7px;
+      word-wrap: break-word;
+    }
+
+    th {
+      background: var(--accent);
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .compact th,
+    .compact td {
+      padding: 5px 6px;
+      font-size: 11px;
+    }
+
+    .highlight {
+      background: var(--accent-2);
+    }
+
+    .formula {
+      font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+      font-size: 11px;
+    }
+
+    .small {
+      font-size: 10px;
+    }
+
+    .refs li {
+      margin: 4px 0;
+    }
+
+    .refs a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid #8aa7bb;
+    }
+
+    .avoid-break {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .top-gap {
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SCOAP vs the Min-Max Parallel-Time Heuristic</h1>
+    <p class="subtle">
+      Reference sheet for comparing the original sequential SCOAP rules with the classroom rule:
+      "use max when all required inputs must be ready, use min when any one input is enough."
+    </p>
+  </header>
+
+  <section class="grid-2 avoid-break">
+    <div class="panel">
+      <h3>What each metric is measuring</h3>
+      <table class="compact">
+        <tr>
+          <th style="width: 18%;">Metric</th>
+          <th style="width: 30%;">What it measures</th>
+          <th>Core evaluation rule</th>
+        </tr>
+        <tr>
+          <td><b>Combinational SCOAP</b><br><span class="formula">CC0, CC1</span></td>
+          <td>Estimated control effort through a combinational network.</td>
+          <td>Evaluate a justifying input assignment by summing the needed input costs, then add one gate level.</td>
+        </tr>
+        <tr>
+          <td><b>Sequential SCOAP</b><br><span class="formula">SC0, SC1</span></td>
+          <td>Estimated control effort in a sequential circuit.</td>
+          <td>Same justification logic as SCOAP, but combinational gates add no extra +1. The extra +1 appears when a clocked storage step is needed.</td>
+        </tr>
+        <tr>
+          <td><b>Min-Max heuristic</b><br><span class="formula">T0, T1</span></td>
+          <td>Earliest time frame if independent input conditions can be prepared in parallel.</td>
+          <td>For one justification, the finishing time is controlled by the slowest required input, so use max. Then take min across alternative justifications.</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3>Why the rules split</h3>
+      <p><b>SCOAP</b> is a <b>cost metric</b>, so when a gate requires multiple input conditions together, the original rule adds their costs.</p>
+      <p><b>Min-Max</b> is a <b>parallel scheduling metric</b>, so when multiple input conditions can be prepared at the same time, the delay is the slowest one, not the sum.</p>
+      <p class="highlight" style="padding: 8px; border: 1px solid var(--line); border-radius: 4px;">
+        For one output value <span class="formula">v</span> and a justifying assignment <span class="formula">j</span>:<br>
+        <span class="formula">SCOAP: cost(j) = sum of required input controllabilities</span><br>
+        <span class="formula">Min-Max: time(j) = max of required input times</span>
+      </p>
+      <p>Then both methods choose the best justification by taking <span class="formula">min</span> across the possible justifications.</p>
+    </div>
+  </section>
+
+  <section class="avoid-break">
+    <h2>Gate Rule Comparison</h2>
+    <table class="compact">
+      <tr>
+        <th style="width: 8%;">Gate</th>
+        <th style="width: 30%;">Combinational SCOAP</th>
+        <th style="width: 28%;">Sequential SCOAP</th>
+        <th style="width: 34%;">Min-Max parallel-time heuristic</th>
+      </tr>
+      <tr>
+        <td><b>PI</b></td>
+        <td class="formula">CC0 = 1, CC1 = 1</td>
+        <td class="formula">SC0 = 0, SC1 = 0</td>
+        <td class="formula">T0 = 0, T1 = 0</td>
+      </tr>
+      <tr>
+        <td><b>Fanout</b></td>
+        <td class="formula">same as stem</td>
+        <td class="formula">same as stem</td>
+        <td class="formula">same as stem</td>
+      </tr>
+      <tr>
+        <td><b>BUF</b></td>
+        <td class="formula">CC0(z) = CC0(a) + 1<br>CC1(z) = CC1(a) + 1</td>
+        <td class="formula">SC0(z) = SC0(a)<br>SC1(z) = SC1(a)</td>
+        <td class="formula">T0(z) = T0(a)<br>T1(z) = T1(a)</td>
+      </tr>
+      <tr>
+        <td><b>NOT</b></td>
+        <td class="formula">CC0(z) = CC1(a) + 1<br>CC1(z) = CC0(a) + 1</td>
+        <td class="formula">SC0(z) = SC1(a)<br>SC1(z) = SC0(a)</td>
+        <td class="formula">T0(z) = T1(a)<br>T1(z) = T0(a)</td>
+      </tr>
+      <tr>
+        <td><b>AND</b></td>
+        <td class="formula">CC0(z) = min CC0(xi) + 1<br>CC1(z) = sum CC1(xi) + 1</td>
+        <td class="formula">SC0(z) = min SC0(xi)<br>SC1(z) = sum SC1(xi)</td>
+        <td class="formula">T0(z) = min T0(xi)<br>T1(z) = max T1(xi)</td>
+      </tr>
+      <tr>
+        <td><b>NAND</b></td>
+        <td class="formula">CC0(z) = sum CC1(xi) + 1<br>CC1(z) = min CC0(xi) + 1</td>
+        <td class="formula">SC0(z) = sum SC1(xi)<br>SC1(z) = min SC0(xi)</td>
+        <td class="formula">T0(z) = max T1(xi)<br>T1(z) = min T0(xi)</td>
+      </tr>
+      <tr>
+        <td><b>OR</b></td>
+        <td class="formula">CC0(z) = sum CC0(xi) + 1<br>CC1(z) = min CC1(xi) + 1</td>
+        <td class="formula">SC0(z) = sum SC0(xi)<br>SC1(z) = min SC1(xi)</td>
+        <td class="formula">T0(z) = max T0(xi)<br>T1(z) = min T1(xi)</td>
+      </tr>
+      <tr>
+        <td><b>NOR</b></td>
+        <td class="formula">CC0(z) = min CC1(xi) + 1<br>CC1(z) = sum CC0(xi) + 1</td>
+        <td class="formula">SC0(z) = min SC1(xi)<br>SC1(z) = sum SC0(xi)</td>
+        <td class="formula">T0(z) = min T1(xi)<br>T1(z) = max T0(xi)</td>
+      </tr>
+      <tr>
+        <td><b>XOR</b></td>
+        <td class="formula">CC0(z) = min(CC0(a)+CC0(b), CC1(a)+CC1(b)) + 1<br>CC1(z) = min(CC0(a)+CC1(b), CC1(a)+CC0(b)) + 1</td>
+        <td class="formula">SC0(z) = min(SC0(a)+SC0(b), SC1(a)+SC1(b))<br>SC1(z) = min(SC0(a)+SC1(b), SC1(a)+SC0(b))</td>
+        <td class="formula">T0(z) = min(max(T0(a),T0(b)), max(T1(a),T1(b)))<br>T1(z) = min(max(T0(a),T1(b)), max(T1(a),T0(b)))</td>
+      </tr>
+      <tr>
+        <td><b>XNOR</b></td>
+        <td class="formula">CC0(z) = min(CC0(a)+CC1(b), CC1(a)+CC0(b)) + 1<br>CC1(z) = min(CC0(a)+CC0(b), CC1(a)+CC1(b)) + 1</td>
+        <td class="formula">SC0(z) = min(SC0(a)+SC1(b), SC1(a)+SC0(b))<br>SC1(z) = min(SC0(a)+SC0(b), SC1(a)+SC1(b))</td>
+        <td class="formula">T0(z) = min(max(T0(a),T1(b)), max(T1(a),T0(b)))<br>T1(z) = min(max(T0(a),T0(b)), max(T1(a),T1(b)))</td>
+      </tr>
+    </table>
+    <p class="small subtle">
+      For multi-input parity gates, extend the same justification logic: evaluate each required input pattern, then take the best one.
+    </p>
+  </section>
+
+  <section class="grid-3 top-gap avoid-break">
+    <div class="panel">
+      <h3>How to read the AND / OR rules</h3>
+      <p><b>All inputs required</b> for the target output:</p>
+      <p class="formula">SCOAP uses sum</p>
+      <p class="formula">Min-Max uses max</p>
+      <p><b>Any one input enough</b> for the target output:</p>
+      <p class="formula">Both use min</p>
+    </div>
+    <div class="panel">
+      <h3>Storage element note</h3>
+      <p>In sequential SCOAP, the extra <span class="formula">+1</span> does <b>not</b> come from a combinational gate. It comes from a required clocked state transition through storage.</p>
+      <p>That is why sequential formulas look like combinational formulas with the gate-level <span class="formula">+1</span> removed.</p>
+    </div>
+    <div class="panel">
+      <h3>Z example from your figure</h3>
+      <p>Gate <span class="formula">Z</span> is an AND with inputs <span class="formula">[0,1]</span> and <span class="formula">[1,2]</span>.</p>
+      <p class="formula">Sequential SCOAP: SC0(Z) = min(0,1) = 0</p>
+      <p class="formula">Sequential SCOAP: SC1(Z) = 1 + 2 = 3</p>
+      <p class="formula">Min-Max heuristic: T1(Z) = max(1,2) = 2</p>
+      <p><b>So 3 and 2 are both valid, but they belong to different metrics.</b></p>
+    </div>
+  </section>
+
+  <section class="avoid-break">
+    <h2>Where the two rule systems come from</h2>
+    <table class="compact">
+      <tr>
+        <th style="width: 22%;">Rule family</th>
+        <th>Origin and interpretation</th>
+      </tr>
+      <tr>
+        <td><b>Original SCOAP rules</b></td>
+        <td>
+          Goldstein defines controllability by evaluating justifying input assignments using the <span class="formula">sum</span> of the required input controllabilities, then taking the best one. For sequential SCOAP, combinational cells have sequential depth 0, so there is no per-gate +1 there.
+        </td>
+      </tr>
+      <tr>
+        <td><b>Min-Max method</b></td>
+        <td>
+          This comes from a parallel arrival-time or time-frame interpretation. If several input conditions are all needed and can be prepared simultaneously, the total time is governed by the slowest required input, hence <span class="formula">max</span>. If only one input condition is enough, use <span class="formula">min</span>.
+        </td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="avoid-break">
+    <h2>Sources</h2>
+    <ol class="refs">
+      <li>
+        L. H. Goldstein and E. L. Thigpen, <i>SCOAP: Sandia Controllability/Observability Analysis Program</i>, DAC 1980.
+        <a href="https://www.cs.york.ac.uk/rts/docs/DAC-1964-2006/PAPERS/1980/DAC80_190.PDF">https://www.cs.york.ac.uk/rts/docs/DAC-1964-2006/PAPERS/1980/DAC80_190.PDF</a>
+      </li>
+      <li>
+        M. L. Bushnell and V. D. Agrawal, sequential SCOAP worked example with gate 5 / Z in Chapter 6.
+        <a href="https://studylib.net/doc/27851539/essentials-of-electronic-testing--soc-">https://studylib.net/doc/27851539/essentials-of-electronic-testing--soc-</a>
+      </li>
+      <li>
+        J. Plusquellic, SCOAP summary notes, University of New Mexico.
+        <a href="https://ece-research.unm.edu/jimp/vlsi_test/slides/html/testability_measures.html">https://ece-research.unm.edu/jimp/vlsi_test/slides/html/testability_measures.html</a>
+      </li>
+    </ol>
+  </section>
+</body>
+</html>
