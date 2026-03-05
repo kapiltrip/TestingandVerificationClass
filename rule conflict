@@ -1,0 +1,80 @@
+**Core Difference**
+
+Let `J_v(z)` be the set of input assignments that justify output `z=v`.
+
+| Metric | Rule |
+|---|---|
+| Original sequential SCOAP | `SC_v(z) = min over j in J_v(z) of [ sum of the needed input controllabilities in j ]` |
+| Teacher’s `min/max` method | `T_v(z) = min over j in J_v(z) of [ max of the needed input times in j ]` |
+
+So the difference is exactly this:
+
+- **SCOAP** uses **`sum` inside each required assignment**
+- **parallel time / min-max heuristic** uses **`max` inside each required assignment**
+
+Why?
+
+- SCOAP is a **cost / effort measure**: how much total control work is needed.
+- The `min/max` rule is a **time-frame / earliest-cycle measure**: if required inputs can be prepared in parallel, the slowest one dominates.
+
+That is why for an AND gate with inputs `[0,1]` and `[1,2]`:
+
+- **SCOAP**: `SC1 = 1 + 2 = 3`
+- **min/max heuristic**: `T1 = max(1,2) = 2`
+
+---
+
+**Gate-by-Gate Comparison**
+
+Using `a,b` as inputs:
+
+| Gate | Original sequential SCOAP | `min/max` parallel-time heuristic |
+|---|---|---|
+| `BUF` | `SC0(z)=SC0(a)` , `SC1(z)=SC1(a)` | `T0(z)=T0(a)` , `T1(z)=T1(a)` |
+| `NOT` | `SC0(z)=SC1(a)` , `SC1(z)=SC0(a)` | `T0(z)=T1(a)` , `T1(z)=T0(a)` |
+| `AND` | `SC0(z)=min(SC0(a),SC0(b))` , `SC1(z)=SC1(a)+SC1(b)` | `T0(z)=min(T0(a),T0(b))` , `T1(z)=max(T1(a),T1(b))` |
+| `NAND` | `SC0(z)=SC1(a)+SC1(b)` , `SC1(z)=min(SC0(a),SC0(b))` | `T0(z)=max(T1(a),T1(b))` , `T1(z)=min(T0(a),T0(b))` |
+| `OR` | `SC0(z)=SC0(a)+SC0(b)` , `SC1(z)=min(SC1(a),SC1(b))` | `T0(z)=max(T0(a),T0(b))` , `T1(z)=min(T1(a),T1(b))` |
+| `NOR` | `SC0(z)=min(SC1(a),SC1(b))` , `SC1(z)=SC0(a)+SC0(b)` | `T0(z)=min(T1(a),T1(b))` , `T1(z)=max(T0(a),T0(b))` |
+| `XOR` | `SC0(z)=min(SC0(a)+SC0(b), SC1(a)+SC1(b))` , `SC1(z)=min(SC0(a)+SC1(b), SC1(a)+SC0(b))` | `T0(z)=min(max(T0(a),T0(b)), max(T1(a),T1(b)))` , `T1(z)=min(max(T0(a),T1(b)), max(T1(a),T0(b)))` |
+| `XNOR` | `SC0(z)=min(SC0(a)+SC1(b), SC1(a)+SC0(b))` , `SC1(z)=min(SC0(a)+SC0(b), SC1(a)+SC1(b))` | `T0(z)=min(max(T0(a),T1(b)), max(T1(a),T0(b)))` , `T1(z)=min(max(T0(a),T0(b)), max(T1(a),T1(b)))` |
+
+For `n`-input `AND/OR`, the same pattern extends naturally:
+- SCOAP: `sum` when **all required inputs** are needed, `min` when **any one** is enough.
+- Time heuristic: `max` when **all required inputs** are needed, `min` when **any one** is enough.
+
+---
+
+**Where the Difference Comes From**
+
+The original SCOAP rule is from Goldstein’s definition of output controllability: evaluate each justifying input assignment by taking the **sum** of its input controllabilities, then take the **minimum** over the possible justifications, then add cell depth. For **sequential** SCOAP, combinational gates have sequential depth `0`, and flip-flops have sequential depth `1`.  
+Source: [Goldstein and Thigpen, DAC 1980](https://www.cs.york.ac.uk/rts/docs/DAC-1964-2006/PAPERS/1980/DAC80_190.PDF), p. 190-191.
+
+The textbook using your figure says the same thing in simpler words: sequential formulas differ from combinational formulas only in that you **do not add `1` across logic levels**; you add `1` only when passing through a flip-flop. It also explicitly states that gate 5’s `SC1` becomes `3`.  
+Source: [Electronic Testing for VLSI Circuits, Sec. 6.1.3-6.1.4](https://studylib.net/doc/27851539/essentials-of-electronic-testing--soc-)
+
+The `min/max` method is not the original SCOAP recurrence. It comes from a different interpretation:
+- “How soon can this value appear if independent requirements are prepared in parallel?”
+- If **all** required inputs must be ready, the finish time is the **slowest** one: `max(...)`
+- If **any one** input is enough, the finish time is the **earliest** one: `min(...)`
+
+That is why it behaves like a level / arrival-time calculation. The same textbook’s levelization algorithm uses “output level = maximum input level + 1,” which is the same scheduling intuition.  
+Source: [same textbook, levelization discussion](https://studylib.net/doc/27851539/essentials-of-electronic-testing--soc-)
+
+---
+
+**For Your `Z` Node**
+
+`Z` is the output of an `AND` gate, with inputs:
+
+- `[0,1]`
+- `[1,2]`
+
+So:
+
+- **original sequential SCOAP**: `SC1(Z)=1+2=3`
+- **teacher’s min/max time rule**: `T1(Z)=max(1,2)=2`
+
+So both numbers are internally consistent, but they belong to **different metrics**.
+
+If you want, I can make the same table one more time in a very compact “exam-sheet” form with just formulas and no explanation.

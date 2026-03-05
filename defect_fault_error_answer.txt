@@ -1,0 +1,221 @@
+Question 1:
+What is the difference between a defect, a fault, and an error in hardware/system design, and how are they related in causing (or not causing) failures?
+
+Answer 1:
+In dependable-system and hardware-testing terminology, defect, fault, and error describe different stages of the same underlying problem, but at different levels of abstraction. Understanding this distinction is important because it tells us where to detect issues, how to model them, and how to prevent failures.
+
+1) Defect (physical or implementation-level imperfection)
+A defect is an unintended deviation between the implemented hardware and the intended design. In simple terms, the chip/system is not built exactly as specified.
+
+Key idea:
+- A defect is usually tied to physical reality: manufacturing imperfections, timing margin issues, incorrect wiring, process variation, material contamination, etc.
+
+Important property:
+- A defect may or may not cause a visible failure.
+- It can remain latent (inactive) if the operating conditions or input patterns never excite it.
+
+Examples:
+- A short between two adjacent lines due to fabrication contamination.
+- An open connection in a metal layer.
+- A transistor parameter drift that still stays within functional tolerance under normal conditions.
+
+2) Fault (logical/functional representation of a defect)
+A fault is the abstracted, testable, function-level model of a defect.
+Meaning: instead of describing the physical damage directly, we describe its effect in logic/behavioral terms so it can be analyzed and tested.
+Since physical defects are hard to reason about directly during verification, engineers represent them with fault models.
+
+Key idea:
+- Fault = how a defect is represented at a higher abstraction layer.
+
+Common fault models:
+- Stuck-at-0 / stuck-at-1 fault.
+- Bridging fault.
+- Delay fault (path delay too large).
+- Transition fault.
+
+Why this matters:
+- Test generation tools (ATPG), simulation, and formal methods usually operate on faults, not raw physical defects.
+- One physical defect can map to one or multiple logical faults depending on where and how it manifests.
+
+3) Error (incorrect internal state or value during execution)
+An error occurs when an activated fault produces an incorrect internal value/state in the system.
+
+Key idea:
+- Error is the runtime manifestation inside the system behavior.
+
+Important property:
+- An error may still be masked before it reaches output (for example via redundancy, logic masking, timing masking, or software recovery).
+
+Examples:
+- A register captures the wrong bit due to a delay fault.
+- An ALU intermediate result flips due to a transiently activated faulty path.
+
+4) Relationship chain: Defect -> Fault -> Error -> Failure
+This is the classical cause-propagation chain:
+- Defect exists physically.
+- We model it as a fault.
+- Under certain activation conditions, the fault causes an error.
+- If the error propagates to a service/output boundary and violates expected behavior, we observe a failure.
+
+So, not every defect leads to failure:
+- Defect can be unactivated.
+- Activated fault may create an error that is internally masked.
+- Error may not propagate to user-visible outputs.
+
+5) Why this distinction is useful in testing and verification
+- Manufacturing/DFT teams focus on defect coverage via fault models.
+- Verification teams focus on error propagation and observability.
+- Reliability/safety teams focus on failure modes and system impact.
+
+By separating terms, engineers can precisely answer:
+- Where did the issue originate? (defect)
+- How do we model/test it? (fault)
+- What went wrong during execution? (error)
+- What did the user/system observe? (failure)
+
+In one sentence:
+A defect is the physical imperfection, a fault is its abstract functional model, and an error is the incorrect internal state produced when that fault is activated; only propagated, unmasked errors become observable failures.
+
+Question 2:
+Why model faults?
+
+Answer 2:
+Faults are modeled because real physical defects are extremely numerous and often not directly analyzable at scale. A fault model provides a practical abstraction that helps engineers test, reason about, and measure quality.
+
+1) Real defects are too many and too complex
+- Modern chips contain huge numbers of devices and interconnects, creating a very large space of possible physical defects.
+- Directly testing every physical defect scenario is usually infeasible in cost and time.
+
+2) Fault models identify clear testing targets
+- Instead of trying to test every possible physical defect, engineers first choose a set of representative fault types (such as stuck-at, transition, or bridging faults) that capture the most meaningful defect behavior at the logic level.
+- This converts a vague question ("what should we test in this huge chip?") into a concrete target list ("which fault sites and fault types must be detected?").
+- Because targets are explicit, ATPG tools can generate patterns systematically for detection, not by guesswork.
+- It also helps prioritize effort: the team can focus on high-impact and high-probability faults first, then expand coverage if needed.
+- In short, fault modeling turns testing from open-ended exploration into goal-driven verification with measurable objectives.
+
+3) Fault models limit test-generation scope
+- Test generation is constrained to modeled fault classes (for example, stuck-at or delay faults).
+- This controlled scope makes ATPG and verification computationally practical.
+
+4) Fault models make analysis possible
+- They create a mapping between defect effects and specific test patterns.
+- Engineers can reason about detection conditions, observability, and diagnosability in a structured way.
+
+5) Effectiveness becomes measurable
+- With a model, teams can compute fault coverage for given test patterns.
+- Coverage metrics let teams compare test quality, tune patterns, and track verification progress quantitatively.
+
+In one sentence:
+We model faults to turn an unmanageably large physical-defect problem into a finite, analyzable, and measurable testing problem.
+
+Question 3:
+What is fault equivalence?
+
+Answer 3:
+Fault equivalence is defined as: two faults f1 and f2 are equivalent if no test can distinguish them at the primary outputs, i.e., for all input vectors they produce identical observable behavior (equivalently, T(f1) = T(f2), where T(f) is the set of tests detecting fault f). Equivalent faults are collapsed into one representative fault.
+
+Rule summary (single stuck-at model, local gate-level/fanout-free view):
+- AND gate: all input `sa0` faults are equivalent to output `sa0`.
+- OR gate: all input `sa1` faults are equivalent to output `sa1`.
+- NAND gate: all input `sa0` faults are equivalent to output `sa1`.
+- NOR gate: all input `sa1` faults are equivalent to output `sa0`.
+- NOT gate: input `sa0` is equivalent to output `sa1`, and input `sa1` is equivalent to output `sa0`.
+- BUF gate: input `sa0` is equivalent to output `sa0`, and input `sa1` is equivalent to output `sa1`.
+- XOR/XNOR gates: no simple full input-to-output equivalence rule like AND/OR; handle faults explicitly.
+
+Non-equivalent side to remember:
+- For AND/NAND, input `sa1` faults are generally not equivalent to the output stuck-at fault.
+- For OR/NOR, input `sa0` faults are generally not equivalent to the output stuck-at fault.
+
+Question 4:
+What rules are used for dominance fault collapsing?
+
+Answer 4:
+
+You are mixing two ideas that look similar but behave differently in fault collapsing:
+
+- Fault equivalence: two faults have exactly the same set of tests -> keep one representative (input or output, but only one).
+- Fault dominance: every test for fault F1 also detects F2 -> F1 dominates F2 -> drop the dominated one (keep the harder-to-detect one).
+
+A clean way to remember it is: equivalence = "same tests", dominance = "subset of tests".
+
+## AND gate (Y = A.B) (generalizes to n-input AND)
+
+### 1) Equivalence (controlling-value stuck-at faults)
+
+To detect Y s-a-0, you must make the good output 1 -> all inputs = 1.
+
+To detect A s-a-0, you also must set A=1 and all other inputs 1 -> again all inputs = 1.
+
+So:
+- AND: Y s-a-0 is equivalent to each input s-a-0.
+
+In collapsing, keep only one representative (often output s-a-0) and remove the rest as equivalent.
+
+### 2) Dominance (non-controlling-value stuck-at faults)
+
+To detect A s-a-1, you need A=0 and all others 1 so that good Y=0 but faulty value makes it 1.
+That test will also detect Y s-a-1, because Y is supposed to be 0 on that vector.
+
+But the reverse is not true (many tests detect Y s-a-1, not all detect A s-a-1).
+
+So:
+- AND: each input s-a-1 dominates output s-a-1.
+  (drop Y s-a-1, keep input s-a-1 faults)
+
+## OR gate (Y = A + B)
+
+This is the mirror image of AND.
+
+### 1) Equivalence
+
+To detect Y s-a-1, make good output 0 -> all inputs = 0.
+Same condition for any input s-a-1.
+
+So:
+- OR: Y s-a-1 is equivalent to each input s-a-1.
+
+### 2) Dominance
+
+Each input s-a-0 is harder than output s-a-0, and detecting it also detects output s-a-0.
+
+So:
+- OR: each input s-a-0 dominates output s-a-0.
+  (drop Y s-a-0, keep input s-a-0 faults)
+
+## NAND and NOR (output inversion flips the output fault value)
+
+### NAND (Y = ~(A.B))
+
+- NAND equivalence: input s-a-0 is equivalent to output s-a-1.
+- NAND dominance: input s-a-1 dominates output s-a-0.
+
+### NOR (Y = ~(A + B))
+
+- NOR equivalence: input s-a-1 is equivalent to output s-a-0.
+- NOR dominance: input s-a-0 dominates output s-a-1.
+
+## One compact summary table
+
+| Gate | Equivalent class (keep 1 rep) | Dominance (drop output fault) |
+| ---- | ------------------------------ | ------------------------------ |
+| AND  | input s-a-0 equivalent to output s-a-0 | input s-a-1 dominates output s-a-1 |
+| OR   | input s-a-1 equivalent to output s-a-1 | input s-a-0 dominates output s-a-0 |
+| NAND | input s-a-0 equivalent to output s-a-1 | input s-a-1 dominates output s-a-0 |
+| NOR  | input s-a-1 equivalent to output s-a-0 | input s-a-0 dominates output s-a-1 |
+
+## Fixing your statement
+
+"For AND/OR/NAND/NOR the input dominates the output, so inputs are gone and output can be placed at any input or both inputs" is not always correct.
+
+- Sometimes input and output are equivalent (then keep either one, but not both).
+- Sometimes input dominates output (then drop the output, not the input).
+- For AND/OR/NAND/NOR, only one stuck-at value side is equivalence; the other side is dominance (as in the table).
+
+If you want, pick one exact case (gate + stuck-at value), and I will show the sensitization/detection vectors step by step.
+
+Reference:
+- https://www.youtube.com/watch?v=rXHRwZXQJAQ
+- https://www.youtube.com/watch?v=v6R-PA6QuCU&t=2510s
+- https://www.youtube.com/watch?v=rNzOgS6ptY0&list=PLfMCiCIRnpUmc68lVFu3tNvGuEtNM5Ngr&index=6
+- IMPORTANT: https://www.youtube.com/watch?v=jndu3M1qs94&list=PLDZlOuVY2LvinsIL-2htrgewSc98l2RwF&index=14
