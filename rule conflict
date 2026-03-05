@@ -2,10 +2,15 @@
 
 Let `J_v(z)` be the set of input assignments that justify output `z=v`.
 
-| Metric | Rule |
-|---|---|
-| Original sequential SCOAP | `SC_v(z) = min over j in J_v(z) of [ sum of the needed input controllabilities in j ]` |
-| Teacher’s `min/max` method | `T_v(z) = min over j in J_v(z) of [ max of the needed input times in j ]` |
++---------------------------+--------------------------------------------------+
+| Metric                    | Rule                                             |
++---------------------------+--------------------------------------------------+
+| Original sequential SCOAP | `SC_v(z) = min over j in J_v(z) of`              |
+|                           | `[ sum of the needed input`                      |
+|                           | `controllabilities in j ]`                       |
+| Teacher's `min/max`       | `T_v(z) = min over j in J_v(z) of`               |
+| method                    | `[ max of the needed input times in j ]`         |
++---------------------------+--------------------------------------------------+
 
 So the difference is exactly this:
 
@@ -28,16 +33,37 @@ That is why for an AND gate with inputs `[0,1]` and `[1,2]`:
 
 Using `a,b` as inputs:
 
-| Gate | Original sequential SCOAP | `min/max` parallel-time heuristic |
-|---|---|---|
-| `BUF` | `SC0(z)=SC0(a)` , `SC1(z)=SC1(a)` | `T0(z)=T0(a)` , `T1(z)=T1(a)` |
-| `NOT` | `SC0(z)=SC1(a)` , `SC1(z)=SC0(a)` | `T0(z)=T1(a)` , `T1(z)=T0(a)` |
-| `AND` | `SC0(z)=min(SC0(a),SC0(b))` , `SC1(z)=SC1(a)+SC1(b)` | `T0(z)=min(T0(a),T0(b))` , `T1(z)=max(T1(a),T1(b))` |
-| `NAND` | `SC0(z)=SC1(a)+SC1(b)` , `SC1(z)=min(SC0(a),SC0(b))` | `T0(z)=max(T1(a),T1(b))` , `T1(z)=min(T0(a),T0(b))` |
-| `OR` | `SC0(z)=SC0(a)+SC0(b)` , `SC1(z)=min(SC1(a),SC1(b))` | `T0(z)=max(T0(a),T0(b))` , `T1(z)=min(T1(a),T1(b))` |
-| `NOR` | `SC0(z)=min(SC1(a),SC1(b))` , `SC1(z)=SC0(a)+SC0(b)` | `T0(z)=min(T1(a),T1(b))` , `T1(z)=max(T0(a),T0(b))` |
-| `XOR` | `SC0(z)=min(SC0(a)+SC0(b), SC1(a)+SC1(b))` , `SC1(z)=min(SC0(a)+SC1(b), SC1(a)+SC0(b))` | `T0(z)=min(max(T0(a),T0(b)), max(T1(a),T1(b)))` , `T1(z)=min(max(T0(a),T1(b)), max(T1(a),T0(b)))` |
-| `XNOR` | `SC0(z)=min(SC0(a)+SC1(b), SC1(a)+SC0(b))` , `SC1(z)=min(SC0(a)+SC0(b), SC1(a)+SC1(b))` | `T0(z)=min(max(T0(a),T1(b)), max(T1(a),T0(b)))` , `T1(z)=min(max(T0(a),T0(b)), max(T1(a),T1(b)))` |
++------+--------------------------------------+--------------------------------------+
+| Gate | Original sequential SCOAP            | `min/max` parallel-time heuristic    |
++------+--------------------------------------+--------------------------------------+
+| BUF  | `SC0(z)=SC0(a)`                      | `T0(z)=T0(a)`                        |
+|      | `SC1(z)=SC1(a)`                      | `T1(z)=T1(a)`                        |
++------+--------------------------------------+--------------------------------------+
+| NOT  | `SC0(z)=SC1(a)`                      | `T0(z)=T1(a)`                        |
+|      | `SC1(z)=SC0(a)`                      | `T1(z)=T0(a)`                        |
++------+--------------------------------------+--------------------------------------+
+| AND  | `SC0(z)=min(SC0(a),SC0(b))`          | `T0(z)=min(T0(a),T0(b))`             |
+|      | `SC1(z)=SC1(a)+SC1(b)`               | `T1(z)=max(T1(a),T1(b))`             |
++------+--------------------------------------+--------------------------------------+
+| NAND | `SC0(z)=SC1(a)+SC1(b)`               | `T0(z)=max(T1(a),T1(b))`             |
+|      | `SC1(z)=min(SC0(a),SC0(b))`          | `T1(z)=min(T0(a),T0(b))`             |
++------+--------------------------------------+--------------------------------------+
+| OR   | `SC0(z)=SC0(a)+SC0(b)`               | `T0(z)=max(T0(a),T0(b))`             |
+|      | `SC1(z)=min(SC1(a),SC1(b))`          | `T1(z)=min(T1(a),T1(b))`             |
++------+--------------------------------------+--------------------------------------+
+| NOR  | `SC0(z)=min(SC1(a),SC1(b))`          | `T0(z)=min(T1(a),T1(b))`             |
+|      | `SC1(z)=SC0(a)+SC0(b)`               | `T1(z)=max(T0(a),T0(b))`             |
++------+--------------------------------------+--------------------------------------+
+| XOR  | `SC0(z)=min(SC0(a)+SC0(b),`          | `T0(z)=min(max(T0(a),T0(b)),`        |
+|      | `           SC1(a)+SC1(b))`          | `           max(T1(a),T1(b)))`       |
+|      | `SC1(z)=min(SC0(a)+SC1(b),`          | `T1(z)=min(max(T0(a),T1(b)),`        |
+|      | `           SC1(a)+SC0(b))`          | `           max(T1(a),T0(b)))`       |
++------+--------------------------------------+--------------------------------------+
+| XNOR | `SC0(z)=min(SC0(a)+SC1(b),`          | `T0(z)=min(max(T0(a),T1(b)),`        |
+|      | `           SC1(a)+SC0(b))`          | `           max(T1(a),T0(b)))`       |
+|      | `SC1(z)=min(SC0(a)+SC0(b),`          | `T1(z)=min(max(T0(a),T0(b)),`        |
+|      | `           SC1(a)+SC1(b))`          | `           max(T1(a),T1(b)))`       |
++------+--------------------------------------+--------------------------------------+
 
 For `n`-input `AND/OR`, the same pattern extends naturally:
 - SCOAP: `sum` when **all required inputs** are needed, `min` when **any one** is enough.
