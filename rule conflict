@@ -1,106 +1,317 @@
-**Core Difference**
+RULE CONFLICT: ORIGINAL SEQUENTIAL SCOAP VS MIN/MAX PARALLEL-TIME RULE
+=====================================================================
 
-Let `J_v(z)` be the set of input assignments that justify output `z=v`.
+1. Core claim
+-------------
 
-+---------------------------+--------------------------------------------------+
-| Metric                    | Rule                                             |
-+---------------------------+--------------------------------------------------+
-| Original sequential SCOAP | `SC_v(z) = min over j in J_v(z) of`              |
-|                           | `[ sum of the needed input`                      |
-|                           | `controllabilities in j ]`                       |
-| Teacher's `min/max`       | `T_v(z) = min over j in J_v(z) of`               |
-| method                    | `[ max of the needed input times in j ]`         |
-+---------------------------+--------------------------------------------------+
+The two recurrences agree on one thing:
 
-So the difference is exactly this:
+  Take the minimum across alternative input assignments that can justify
+  the target output value.
 
-- **SCOAP** uses **`sum` inside each required assignment**
-- **parallel time / min-max heuristic** uses **`max` inside each required assignment**
+They differ inside each one of those justifying assignments:
 
-Why?
+  Original SCOAP:
+    add the controllabilities of all inputs that must be forced together
 
-- SCOAP is a **cost / effort measure**: how much total control work is needed.
-- The `min/max` rule is a **time-frame / earliest-cycle measure**: if required inputs can be prepared in parallel, the slowest one dominates.
+  Teacher's min/max rule:
+    take the maximum of the input times for all inputs that must be ready
+    together
 
-That is why for an AND gate with inputs `[0,1]` and `[1,2]`:
+So the real difference is:
 
-- **SCOAP**: `SC1 = 1 + 2 = 3`
-- **min/max heuristic**: `T1 = max(1,2) = 2`
+  SCOAP = min of sums
+  min/max rule = min of maxes
 
----
+This means they are not the same metric.
 
-**Gate-by-Gate Comparison**
 
-Using `a,b` as inputs:
+2. Formal definition of the original SCOAP rule
+-----------------------------------------------
+
+Let J_v(z) be the set of all input assignments that force gate output z to
+the target value v.
+
+Goldstein's definition of output controllability is:
+
+  controllability of z=v
+    = minimum, over all justifying assignments j in J_v(z),
+      of the sum of the input controllabilities required by j,
+      plus the cell depth term
+
+In [GT80], this is stated in equivalent form: output controllability is found
+by taking the minimum, over all justifying input assignments, of the sum of
+the required input controllabilities and then adding the cell-depth term.
+Source: [GT80], p. 191.
+
+For sequential controllability, the same paper says the only difference from
+the combinational measure is where the depth term is counted:
+
+  - combinational cells have sequential depth 0
+  - sequential cells have sequential depth 1
+
+So across ordinary combinational gates in sequential SCOAP, you do not add 1
+at every logic level. You add 1 only when the path crosses a flip-flop or
+other sequential element. That point is part of the formal definition, not a
+special classroom shortcut. Source: [GT80], p. 191.
+
+
+3. What the teacher's min/max rule is actually measuring
+--------------------------------------------------------
+
+The teacher's rule can be written as:
+
+  T_v(z) = min over j in J_v(z) of
+           [ max of the required input times inside j ]
+
+Interpretation:
+
+  - If a justification needs all listed inputs at once, and those inputs can
+    be prepared in parallel, the completion time is controlled by the
+    slowest one -> max(...)
+  - If there are several alternative justifications, the earliest one wins
+    -> min(...)
+
+Important:
+
+  This min/max recurrence is not the original SCOAP recurrence.
+
+Inference from [GT80]:
+
+  Goldstein's sequential controllability is a cost-style estimate based on
+  adding required control effort, while the min/max rule behaves like an
+  ideal parallel completion-time estimate. This inference is consistent with
+  the paper's warning that the actual number of time frames needed can be
+  less than the sequential controllability estimate when parallelism is
+  exploited. Source: [GT80], p. 191.
+
+
+4. Why sum appears in SCOAP
+---------------------------
+
+Under the original definition, each justifying assignment is treated as a set
+of control requirements that must all be established together.
+
+If a gate output requires:
+
+  a=1 and b=1
+
+then the cost of that justification is:
+
+  cost = SC1(a) + SC1(b)
+
+because both requirements belong to the same justification cube.
+
+If instead the target output can be justified by either:
+
+  a=0
+  or
+  b=0
+
+then the output controllability is:
+
+  min( SC0(a), SC0(b) )
+
+because either single-input justification is enough.
+
+That "sum within one justification, min across alternative justifications"
+structure is the core SCOAP idea. Source: [GT80], p. 191.
+
+
+5. Derived gate rules
+---------------------
+
+Note on citation:
+
+  The OR-gate formulas are written explicitly in [GT80], Eqs. (1)-(4),
+  p. 192. The AND, NAND, and NOR formulas follow by duality and inversion
+  from the same definition. XOR and XNOR follow by directly listing their
+  justifying assignments J_v(z).
+
+
+5.1 Simple 1-input cells
+------------------------
+
+BUF
+  Sequential SCOAP:
+    SC0(z) = SC0(a)
+    SC1(z) = SC1(a)
+
+  Min/max time rule:
+    T0(z) = T0(a)
+    T1(z) = T1(a)
+
+NOT
+  Sequential SCOAP:
+    SC0(z) = SC1(a)
+    SC1(z) = SC0(a)
+
+  Min/max time rule:
+    T0(z) = T1(a)
+    T1(z) = T0(a)
+
+
+5.2 AND-family and OR-family cells
+----------------------------------
 
 +------+--------------------------------------+--------------------------------------+
-| Gate | Original sequential SCOAP            | `min/max` parallel-time heuristic    |
+| Gate | Sequential SCOAP                     | Min/max parallel-time rule           |
 +------+--------------------------------------+--------------------------------------+
-| BUF  | `SC0(z)=SC0(a)`                      | `T0(z)=T0(a)`                        |
-|      | `SC1(z)=SC1(a)`                      | `T1(z)=T1(a)`                        |
+| AND  | SC0(z) = min(SC0(a), SC0(b))         | T0(z) = min(T0(a), T0(b))            |
+|      | SC1(z) = SC1(a) + SC1(b)            | T1(z) = max(T1(a), T1(b))            |
 +------+--------------------------------------+--------------------------------------+
-| NOT  | `SC0(z)=SC1(a)`                      | `T0(z)=T1(a)`                        |
-|      | `SC1(z)=SC0(a)`                      | `T1(z)=T0(a)`                        |
+| NAND | SC0(z) = SC1(a) + SC1(b)            | T0(z) = max(T1(a), T1(b))            |
+|      | SC1(z) = min(SC0(a), SC0(b))         | T1(z) = min(T0(a), T0(b))            |
 +------+--------------------------------------+--------------------------------------+
-| AND  | `SC0(z)=min(SC0(a),SC0(b))`          | `T0(z)=min(T0(a),T0(b))`             |
-|      | `SC1(z)=SC1(a)+SC1(b)`               | `T1(z)=max(T1(a),T1(b))`             |
+| OR   | SC0(z) = SC0(a) + SC0(b)            | T0(z) = max(T0(a), T0(b))            |
+|      | SC1(z) = min(SC1(a), SC1(b))         | T1(z) = min(T1(a), T1(b))            |
 +------+--------------------------------------+--------------------------------------+
-| NAND | `SC0(z)=SC1(a)+SC1(b)`               | `T0(z)=max(T1(a),T1(b))`             |
-|      | `SC1(z)=min(SC0(a),SC0(b))`          | `T1(z)=min(T0(a),T0(b))`             |
-+------+--------------------------------------+--------------------------------------+
-| OR   | `SC0(z)=SC0(a)+SC0(b)`               | `T0(z)=max(T0(a),T0(b))`             |
-|      | `SC1(z)=min(SC1(a),SC1(b))`          | `T1(z)=min(T1(a),T1(b))`             |
-+------+--------------------------------------+--------------------------------------+
-| NOR  | `SC0(z)=min(SC1(a),SC1(b))`          | `T0(z)=min(T1(a),T1(b))`             |
-|      | `SC1(z)=SC0(a)+SC0(b)`               | `T1(z)=max(T0(a),T0(b))`             |
-+------+--------------------------------------+--------------------------------------+
-| XOR  | `SC0(z)=min(SC0(a)+SC0(b),`          | `T0(z)=min(max(T0(a),T0(b)),`        |
-|      | `           SC1(a)+SC1(b))`          | `           max(T1(a),T1(b)))`       |
-|      | `SC1(z)=min(SC0(a)+SC1(b),`          | `T1(z)=min(max(T0(a),T1(b)),`        |
-|      | `           SC1(a)+SC0(b))`          | `           max(T1(a),T0(b)))`       |
-+------+--------------------------------------+--------------------------------------+
-| XNOR | `SC0(z)=min(SC0(a)+SC1(b),`          | `T0(z)=min(max(T0(a),T1(b)),`        |
-|      | `           SC1(a)+SC0(b))`          | `           max(T1(a),T0(b)))`       |
-|      | `SC1(z)=min(SC0(a)+SC0(b),`          | `T1(z)=min(max(T0(a),T0(b)),`        |
-|      | `           SC1(a)+SC1(b))`          | `           max(T1(a),T1(b)))`       |
+| NOR  | SC0(z) = min(SC1(a), SC1(b))         | T0(z) = min(T1(a), T1(b))            |
+|      | SC1(z) = SC0(a) + SC0(b)            | T1(z) = max(T0(a), T0(b))            |
 +------+--------------------------------------+--------------------------------------+
 
-For `n`-input `AND/OR`, the same pattern extends naturally:
-- SCOAP: `sum` when **all required inputs** are needed, `min` when **any one** is enough.
-- Time heuristic: `max` when **all required inputs** are needed, `min` when **any one** is enough.
+Reason:
 
----
+  - AND=1 and OR=0 require all listed inputs simultaneously
+    -> SCOAP uses +
+    -> parallel-time rule uses max
 
-**Where the Difference Comes From**
+  - AND=0 and OR=1 can be justified by any one suitable input
+    -> both metrics use min across alternatives
 
-The original SCOAP rule is from Goldstein’s definition of output controllability: evaluate each justifying input assignment by taking the **sum** of its input controllabilities, then take the **minimum** over the possible justifications, then add cell depth. For **sequential** SCOAP, combinational gates have sequential depth `0`, and flip-flops have sequential depth `1`.  
-Source: [Goldstein and Thigpen, DAC 1980](https://www.cs.york.ac.uk/rts/docs/DAC-1964-2006/PAPERS/1980/DAC80_190.PDF), p. 190-191.
 
-The textbook using your figure says the same thing in simpler words: sequential formulas differ from combinational formulas only in that you **do not add `1` across logic levels**; you add `1` only when passing through a flip-flop. It also explicitly states that gate 5’s `SC1` becomes `3`.  
-Source: [Electronic Testing for VLSI Circuits, Sec. 6.1.3-6.1.4](https://studylib.net/doc/27851539/essentials-of-electronic-testing--soc-)
+5.3 XOR and XNOR
+----------------
 
-The `min/max` method is not the original SCOAP recurrence. It comes from a different interpretation:
-- “How soon can this value appear if independent requirements are prepared in parallel?”
-- If **all** required inputs must be ready, the finish time is the **slowest** one: `max(...)`
-- If **any one** input is enough, the finish time is the **earliest** one: `min(...)`
+For XOR:
 
-That is why it behaves like a level / arrival-time calculation. The same textbook’s levelization algorithm uses “output level = maximum input level + 1,” which is the same scheduling intuition.  
-Source: [same textbook, levelization discussion](https://studylib.net/doc/27851539/essentials-of-electronic-testing--soc-)
+  J_0(z) = { a=0,b=0 ; a=1,b=1 }
+  J_1(z) = { a=0,b=1 ; a=1,b=0 }
 
----
+Therefore:
 
-**For Your `Z` Node**
+  Sequential SCOAP:
+    SC0(z) = min( SC0(a)+SC0(b), SC1(a)+SC1(b) )
+    SC1(z) = min( SC0(a)+SC1(b), SC1(a)+SC0(b) )
 
-`Z` is the output of an `AND` gate, with inputs:
+  Min/max time rule:
+    T0(z) = min( max(T0(a),T0(b)), max(T1(a),T1(b)) )
+    T1(z) = min( max(T0(a),T1(b)), max(T1(a),T0(b)) )
 
-- `[0,1]`
-- `[1,2]`
+For XNOR:
+
+  J_0(z) = { a=0,b=1 ; a=1,b=0 }
+  J_1(z) = { a=0,b=0 ; a=1,b=1 }
+
+Therefore:
+
+  Sequential SCOAP:
+    SC0(z) = min( SC0(a)+SC1(b), SC1(a)+SC0(b) )
+    SC1(z) = min( SC0(a)+SC0(b), SC1(a)+SC1(b) )
+
+  Min/max time rule:
+    T0(z) = min( max(T0(a),T1(b)), max(T1(a),T0(b)) )
+    T1(z) = min( max(T0(a),T0(b)), max(T1(a),T1(b)) )
+
+
+5.4 n-input extension
+---------------------
+
+The same pattern extends directly:
+
+  - If the target output value requires all listed inputs together:
+      SCOAP uses sum(...)
+      min/max rule uses max(...)
+
+  - If the target output value can be justified by any one of several input
+    choices:
+      both metrics use min(...)
+
+So for an n-input AND:
+
+  SC1(z) = sum of all required SC1(input_i)
+  T1(z)  = max of all required T1(input_i)
+
+And for an n-input OR:
+
+  SC0(z) = sum of all required SC0(input_i)
+  T0(z)  = max of all required T0(input_i)
+
+
+6. Your Z node
+--------------
+
+Suppose Z is the output of an AND gate, and its two inputs have:
+
+  left input:  [0,1]
+  right input: [1,2]
+
+meaning:
+
+  left input has SC0/T0 = 0 and SC1/T1 = 1
+  right input has SC0/T0 = 1 and SC1/T1 = 2
+
+To force Z=1 on an AND gate, both inputs must be 1.
 
 So:
 
-- **original sequential SCOAP**: `SC1(Z)=1+2=3`
-- **teacher’s min/max time rule**: `T1(Z)=max(1,2)=2`
+  Original sequential SCOAP:
+    SC1(Z) = SC1(left) + SC1(right)
+           = 1 + 2
+           = 3
 
-So both numbers are internally consistent, but they belong to **different metrics**.
+  Teacher's min/max rule:
+    T1(Z) = max( T1(left), T1(right) )
+          = max(1,2)
+          = 2
 
-If you want, I can make the same table one more time in a very compact “exam-sheet” form with just formulas and no explanation.
+Conclusion:
+
+  Both answers are internally consistent, but they answer different
+  questions.
+
+  - 3 is the SCOAP-style cumulative control cost
+  - 2 is the ideal parallel readiness time
+
+
+7. Bottom-line wording for an exam or viva
+------------------------------------------
+
+If you need a short statement:
+
+  "Original sequential SCOAP is a min-of-sums controllability measure.
+  The teacher's rule is a min-of-maxes parallel-time measure. They coincide
+  on which justifications are possible, but they differ on how they score
+  a justification that requires multiple inputs simultaneously."
+
+
+8. References
+-------------
+
+[G79]
+  Lawrence H. Goldstein,
+  "Controllability/Observability Analysis of Digital Circuits,"
+  IEEE Transactions on Circuits and Systems, vol. 26, no. 9, 1979.
+  DOI: https://doi.org/10.1109/TCS.1979.1084587
+  Metadata: https://www.osti.gov/biblio/5378100
+
+[GT80]
+  Lawrence H. Goldstein and Evelyn L. Thigpen,
+  "SCOAP: Sandia Controllability/Observability Analysis Program,"
+  Proceedings of the 17th Design Automation Conference, 1980, pp. 190-196.
+  DOI: https://doi.org/10.1145/800139.804528
+  PDF: https://www.cs.york.ac.uk/rts/docs/DAC-1964-2006/PAPERS/1980/DAC80_190.PDF
+
+[Y1]
+  Starting Point Sequential
+  YouTube: https://www.youtube.com/watch?v=4Sn5DFU6rs4
+
+[Y2]
+  YouTube
+  https://www.youtube.com/watch?v=AvMZbEJJDGA&t=2144s
+
+Key places used from [GT80]:
+  - p. 191: sequential controllability/observability definitions
+  - p. 191: "minimum sum ... plus the cell depth" definition
+  - p. 191: note that actual time frames may be less if parallelism is used
+  - p. 192: OR-gate equations (1)-(4)

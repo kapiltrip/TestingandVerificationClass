@@ -213,9 +213,3 @@ So:
 - For AND/OR/NAND/NOR, only one stuck-at value side is equivalence; the other side is dominance (as in the table).
 
 If you want, pick one exact case (gate + stuck-at value), and I will show the sensitization/detection vectors step by step.
-
-Reference:
-- https://www.youtube.com/watch?v=rXHRwZXQJAQ
-- https://www.youtube.com/watch?v=v6R-PA6QuCU&t=2510s
-- https://www.youtube.com/watch?v=rNzOgS6ptY0&list=PLfMCiCIRnpUmc68lVFu3tNvGuEtNM5Ngr&index=6
-- IMPORTANT: https://www.youtube.com/watch?v=jndu3M1qs94&list=PLDZlOuVY2LvinsIL-2htrgewSc98l2RwF&index=14
